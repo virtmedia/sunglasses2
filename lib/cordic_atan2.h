@@ -2,7 +2,7 @@
  * cordic_atan2.h
  *
  *  Created on: Sep 28, 2024
- *      Author: Aleksander
+ *      Author: https://github.com/MartinStokroos/fastCORDIC/tree/master
  */
 
 #ifndef LIB_CORDIC_ATAN2_H_

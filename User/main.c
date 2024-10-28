@@ -51,7 +51,7 @@ volatile uint_fast8_t trig10ms=0, trigsw=0;
 volatile int swcooldown=10;
 
 const int state_sz = 3;
-enum State {S_glitter=0, S_demo=1, S_gravity=2} s_state=1;
+enum State {S_glitter=0, S_demo=1, S_gravity=2} s_state=2;
 
 uint8_t debug_i2c=0;
 
@@ -494,6 +494,7 @@ void demo(void){
     }
     clear();
     eight(64,64,0,10);
+
     eight(0,64,0,10);
     eight(0,64,64,10);
     eight2(32,32,0,30);
@@ -513,8 +514,11 @@ void demo(void){
     theaterChase2(2, 3, 32, 50, 3, 20); // Blue
 
     */
-
-    static int animation_step = 0;
+    //after power-up start from some random animation step.
+    static int animation_step = 2137;
+    if(animation_step == 2137){
+        animation_step = prand8(&random_seed) % 38;
+    }
 
     switch (animation_step) {
     case 0:
@@ -560,14 +564,60 @@ void demo(void){
         clear(); ++animation_step;
         break;
     case 18:
-        if(eight_nd(64,64,0,1) == 0) ++animation_step;
+        if(eight_nd(64,64,0,2) == 0) ++animation_step;
         break;
-    case 19: //violet dot with tail
+    case 19:
+        if(eight_nd(0,64,0,2) == 0) ++animation_step;
+        break;
+    case 20:
+        if(eight_nd(0,64,64,2) == 0) ++animation_step;
+        break;
+    case 21:
+        if(eight2_nd(32,32,0,2) == 0) ++animation_step;
+        break;
+    case 22:
+        if(eight2_nd(0,32,0,3) == 0) ++animation_step;
+        break;
+    case 23:
+        if(eight2_nd(0,32,32,3) == 0) ++animation_step;
+        break;
+    case 24:
+        if(eight3_nd(32,0,8,5) == 0) ++animation_step;
+        break;
+    case 25:
+        if(eight3b_nd(8,0,32,5) == 0) ++animation_step;
+        break;
+    case 26:
+        clear(); ++animation_step;
+        break;
+    case 27:
+        if(fill1_nd(32,32,0,5) == 0) ++animation_step;
+        break;
+    case 28:
+        if(fill2_nd(0,32,0,5) == 0) ++animation_step;
+        break;
+    case 29:
+        if(fill1_nd(0,32,32,5) == 0) ++animation_step;
+        break;
+    case 30:
+        if(fill2_nd(32,32,0,5) == 0) ++animation_step;
+        break;
+    case 31: //rainbow full
+    case 32:
+    case 33:
+    case 34:
         if(rainbow_nd(1) == 0) ++animation_step;
         break;
-    case 20: //violet dot with tail
+    case 35: //white theater chase
         if(theaterChase2_nd(32, 32, 32, 10, 6, 10) == 0) ++animation_step;
         break;
+    case 36: //white theater chase
+        if(theaterChase2_nd(32, 2, 1, 5, 4, 20) == 0) ++animation_step;
+        break;
+    case 37: //white theater chase
+        if(theaterChase2_nd(2, 3, 32, 5, 3, 20) == 0) ++animation_step;
+        break;
+
     default:
         animation_step = 0;
         break;
@@ -582,19 +632,30 @@ void gravity(void){
     unsigned char angle=12;
     unsigned int radius=0;
 
+    unsigned char led_pos=0, remainder=0;
+
     int16_t gravityX = ((int16_t)i2c_ReadOneByte(0x29))* 256 + (int16_t)i2c_ReadOneByte(0x28);//OUT_X
     int16_t gravityY = ((int16_t)i2c_ReadOneByte(0x2B))* 256 + (int16_t)i2c_ReadOneByte(0x2A);//OUT_Y
     int16_t gravityZ = ((int16_t)i2c_ReadOneByte(0x2D))* 256 + (int16_t)i2c_ReadOneByte(0x2C);//OUT_Z
 
     if(gravityZ < -15000){ clear(); return;}
 
-    atan2sqrt(gravityX, gravityY * -1, &angle, &radius);
-    angle /= 8; //16 => 180 deg
-    angle += 4;
+    atan2sqrt(gravityX, gravityY * -1, &angle, &radius); //returns 0-255 angle value
+    if(radius <5000){ clear(); return;}
+    if(angle <56){ clear(); return;}
+    if(angle >198){ clear(); return;}
+    //angle is divided by 8 to adjust for smaller count of leds. The remainder from range 0..7 is used
+    //to set the brightness of current and next pixel to make animation more smooth
+    led_pos = angle / 8;
+    remainder = angle - led_pos * 8;
+    led_pos += 4;
 
     clear();
-    setPixelColor(angle, 0, 5, 3);
-    setPixelColor(39+((num_leds-angle) % 30), 0, 5, 3);
+    setPixelColor(led_pos, 0, 8-remainder, 8-remainder); //left eye
+    setPixelColor(led_pos+1, 0, remainder, remainder); //left eye
+
+    setPixelColor(39+((num_leds-led_pos) % 30), 0, 8-remainder, 8-remainder); //right eye
+    setPixelColor(39+((num_leds-(led_pos+1)) % 30), 0, remainder, remainder); //right eye
 }
 
 void glitter(void){
